@@ -7,37 +7,19 @@ const router = express.Router();
 
 type RegionConfig = {
   possibleRegions?: string[];
-  platforms?: Array<{
-    id?: number;
-    skipGamesForRegionDetection?: string[];
-  }>;
 };
 
-function loadRegionConfig(platformId: number): { possibleRegions: string[]; skipGamesForRegionDetection: string[] } {
+function loadPossibleRegions(): string[] {
   const configPath = path.join(__dirname, "../../platforms.json");
   const rawConfig = fs.readFileSync(configPath, "utf8");
   const parsed = JSON.parse(rawConfig) as RegionConfig;
 
-  const possibleRegions = Array.isArray(parsed.possibleRegions)
+  return Array.isArray(parsed.possibleRegions)
     ? parsed.possibleRegions.map((region) => String(region).trim()).filter(Boolean)
     : [];
-
-  const matchingPlatform = (Array.isArray(parsed.platforms) ? parsed.platforms : []).find((platform) => {
-    const parsedId = Number.parseInt(String(platform?.id), 10);
-    return !Number.isNaN(parsedId) && parsedId === platformId;
-  });
-
-  const skipGamesForRegionDetection = Array.isArray(matchingPlatform?.skipGamesForRegionDetection)
-    ? matchingPlatform.skipGamesForRegionDetection.map((title) => String(title).trim()).filter(Boolean)
-    : [];
-
-  return {
-    possibleRegions,
-    skipGamesForRegionDetection,
-  };
 }
 
-function detectRegionFromFileName(gameTitle: string, fileName: string | null, possibleRegions: string[]): string | null {
+function detectRegionFromFileName(fileName: string | null, possibleRegions: string[]): string | null {
   if (!fileName) {
     return null;
   }
@@ -46,7 +28,6 @@ function detectRegionFromFileName(gameTitle: string, fileName: string | null, po
   const parentheticalMatches = fileName.matchAll(/\(([^)]+)\)/g);
 
   let bestRegionIndex: number | null = null;
-  let firstUnknownRegion: string | null = null;
 
   for (const match of parentheticalMatches) {
     const insideParentheses = (match[1] ?? "").trim();
@@ -59,9 +40,6 @@ function detectRegionFromFileName(gameTitle: string, fileName: string | null, po
     for (const candidate of candidateRegions) {
       const regionIndex = regionIndexByName.get(candidate);
       if (regionIndex === undefined) {
-        if (firstUnknownRegion === null) {
-          firstUnknownRegion = candidate;
-        }
         continue;
       }
 
@@ -69,12 +47,6 @@ function detectRegionFromFileName(gameTitle: string, fileName: string | null, po
         bestRegionIndex = regionIndex;
       }
     }
-  }
-
-  if (bestRegionIndex === null && firstUnknownRegion !== null) {
-    throw new Error(
-      `Unknown region \"${firstUnknownRegion}\"\nGame: \"${gameTitle}\"\nFile: \"${fileName}\"`,
-    );
   }
 
   return bestRegionIndex === null ? null : possibleRegions[bestRegionIndex];
@@ -149,10 +121,8 @@ router.post("/files/auto-select-region-preferences", async (req, res) => {
 
   try {
     const candidateGames = await getRegionPreferenceCandidateGames(parsedPlatformId);
-    const { possibleRegions, skipGamesForRegionDetection } = loadRegionConfig(parsedPlatformId);
-    const skipGameTitles = new Set(skipGamesForRegionDetection);
+    const possibleRegions = loadPossibleRegions();
     let updatedCount = 0;
-    const issues: string[] = [];
 
     const candidatesWithRegions: Array<{
       platformId: number;
@@ -166,21 +136,10 @@ router.post("/files/auto-select-region-preferences", async (req, res) => {
     }> = [];
 
     for (const game of candidateGames) {
-      if (skipGameTitles.has(game.gameTitle)) {
-        continue;
-      }
-
       const files = await getFilesForGame(game.platformId, game.gameId);
       const filesWithRegions = files.map((file) => {
         const sourceName = file.name;
-        let detectedRegion: string | null = null;
-
-        try {
-          detectedRegion = detectRegionFromFileName(game.gameTitle, sourceName, possibleRegions);
-        } catch (error) {
-          const details = error instanceof Error ? error.message : String(error);
-          issues.push(details);
-        }
+        const detectedRegion = detectRegionFromFileName(sourceName, possibleRegions);
 
         return {
           md5: file.md5,
@@ -203,20 +162,6 @@ router.post("/files/auto-select-region-preferences", async (req, res) => {
       });
     }
 
-    if (issues.length > 0) {
-      res.status(400).json({
-        error: "Invalid regions detected in file names",
-        details: issues.join("\n\n"),
-        issueCount: issues.length,
-        updatedCount: 0,
-        candidateCount: candidatesWithRegions.length,
-        possibleRegions,
-        skipGamesForRegionDetection,
-        candidates: candidatesWithRegions,
-      });
-      return;
-    }
-
     for (const candidate of candidatesWithRegions) {
       if (!candidate.selectedMd5) {
         continue;
@@ -233,7 +178,6 @@ router.post("/files/auto-select-region-preferences", async (req, res) => {
       updatedCount,
       candidateCount: candidatesWithRegions.length,
       possibleRegions,
-      skipGamesForRegionDetection,
       candidates: candidatesWithRegions,
     });
   } catch (error) {
