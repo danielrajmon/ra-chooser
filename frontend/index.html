@@ -4,16 +4,45 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Platforms</title>
+  <title>Platform Selector</title>
+  <link rel="stylesheet" href="./styles.css" />
 </head>
 
 <body>
-  <h1>Platforms</h1>
-  <select id="platform-select">
-    <option>Loading...</option>
-  </select>
+  <main class="app">
+    <h1>Select Platform</h1>
 
-  <script type="module" src="./src/main.ts"></script>
+    <div class="controls">
+      <div class="controls-row">
+        <div class="platform-control">
+          <select id="platform-select">
+            <option value="">Loading platforms...</option>
+          </select>
+        </div>
+
+        <label class="filter-toggle" for="hide-selected-games">
+          <input id="hide-selected-games" type="checkbox" />
+          <span>Hide finished selections</span>
+        </label>
+
+        <label class="filter-toggle" for="hide-owned-games">
+          <input id="hide-owned-games" type="checkbox" />
+          <span>Hide owned games</span>
+        </label>
+      </div>
+
+      <div class="bulk-actions">
+        <button id="auto-select-single-file-btn" type="button">Auto-select single-file games</button>
+        <button id="auto-select-region-preferences-btn" type="button">Auto-select region preferences</button>
+        <span id="displayed-games-count">Games shown: 0</span>
+      </div>
+    </div>
+
+    <p id="status"></p>
+    <div id="games-container"></div>
+  </main>
+
+  <script type="module" src="./main.js"></script>
 </body>
 
 </html>
