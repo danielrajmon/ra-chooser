@@ -9,7 +9,7 @@ const buildOptions = {
   format: "esm" as const,
   platform: "browser" as const,
   target: ["es2022"],
-  outfile: path.resolve("main.js"),
+  outfile: path.resolve("dist/main.js"),
   sourcemap: true,
   logLevel: "info" as const,
 };

@@ -2,6 +2,7 @@ type FileItemModel = {
   name: string | null;
   md5: string;
   isRequired: boolean | null;
+  isOwned: boolean | null;
 };
 
 type GameModel = {
@@ -31,6 +32,11 @@ export function renderGames(containerElement: HTMLElement, games: GameModel[], p
   for (const game of games) {
     const gameSection = document.createElement("section");
     gameSection.className = "game-card";
+
+    const isOwnedGame = game.files.some((file) => file.isOwned === true);
+    if (isOwnedGame) {
+      gameSection.classList.add("owned-game");
+    }
 
     const gameHeader = document.createElement("div");
     gameHeader.className = "game-header";
