@@ -6,7 +6,9 @@
     "install:backend": "cd backend && npm install",
     "install:frontend": "cd frontend && npm install",
     "start:backend": "cd backend && npm start",
-    "start:frontend": "cd frontend && npm start"
+    "start:frontend": "cd frontend && npm start",
+    "docker:build": "docker buildx build --platform linux/arm64 -t ra-chooser:arm64 --load .",
+    "docker:publish": "set -a && source .env && set +a && docker buildx build --platform linux/amd64 -t ${DOCKER_USERNAME}/ra-chooser:latest --push ."
   },
   "keywords": [],
   "author": "",

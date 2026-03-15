@@ -4,12 +4,24 @@ import path from "path";
 
 config({ path: path.join(__dirname, "../../.env"), quiet: true });
 
+const postgresHost = process.env.POSTGRES_HOST || "localhost";
+const postgresPort = parseInt(process.env.POSTGRES_PORT || "5432", 10);
+const postgresDatabase = process.env.POSTGRES_DB;
+
+if (process.env.NODE_ENV === "production" && ["localhost", "127.0.0.1", "::1"].includes(postgresHost)) {
+  console.warn(
+    `[db] POSTGRES_HOST=${postgresHost} in production. Inside Docker this points to the container itself, not the NAS or another database host.`,
+  );
+}
+
+console.log(`[db] Using PostgreSQL connection parameters host=${postgresHost} port=${postgresPort} database=${postgresDatabase ?? "<unset>"}`);
+
 const pool = new Pool({
   user: process.env.POSTGRES_USER,
   password: process.env.POSTGRES_PASSWORD,
-  host: process.env.POSTGRES_HOST || "localhost",
-  port: parseInt(process.env.POSTGRES_PORT || "5432", 10),
-  database: process.env.POSTGRES_DB,
+  host: postgresHost,
+  port: postgresPort,
+  database: postgresDatabase,
 });
 
 export async function query<T extends QueryResultRow = QueryResultRow>(text: string, values: unknown[] = []): Promise<QueryResult<T>> {

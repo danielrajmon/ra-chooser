@@ -1,4 +1,7 @@
-const API_BASE = "http://localhost:4000/api";
+const isFrontendDevPort = window.location.hostname === "localhost" && window.location.port === "3000";
+const API_BASE = isFrontendDevPort
+  ? `${window.location.protocol}//${window.location.hostname}:4000/api`
+  : `${window.location.origin}/api`;
 
 type PlatformsResponse = Array<{ id: number; name: string; game_count: number; owned_game_count: number }>;
 
