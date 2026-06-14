@@ -1,5 +1,5 @@
 import express from "express";
-import { getPlatforms } from "../db/platforms";
+import { getGlobalGameSummary, getPlatforms } from "../db/platforms";
 import { getGamesForPlatform } from "../db/games";
 
 const router = express.Router();
@@ -12,6 +12,19 @@ router.get("/platforms", async (_req, res) => {
     console.error("[api] Failed to load platforms", error);
     res.status(500).json({
       error: "Failed to load platforms",
+      details: error instanceof Error ? error.message : String(error),
+    });
+  }
+});
+
+router.get("/games/summary", async (_req, res) => {
+  try {
+    const summary = await getGlobalGameSummary();
+    res.json(summary);
+  } catch (error) {
+    console.error("[api] Failed to load game summary", error);
+    res.status(500).json({
+      error: "Failed to load game summary",
       details: error instanceof Error ? error.message : String(error),
     });
   }

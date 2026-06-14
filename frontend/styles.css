@@ -34,6 +34,16 @@ h1 {
   flex-wrap: wrap;
 }
 
+#unfinished-games-count,
+#owned-games-summary {
+  color: #334e68;
+  font-size: 13px;
+  background: #f1f4f8;
+  border: 1px solid #d9e2ec;
+  border-radius: 999px;
+  padding: 6px 10px;
+}
+
 #displayed-games-count {
   margin-left: auto;
   color: #52606d;

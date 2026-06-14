@@ -1,6 +1,7 @@
 import {
   autoSelectRegionPreferences,
   autoSelectSingleFileGames,
+  fetchGlobalGameSummary,
   fetchGamesForPlatform,
   fetchPlatforms,
   updateFileRequired,
@@ -12,6 +13,8 @@ const platformSelect = document.getElementById("platform-select") as HTMLSelectE
 const hideSelectedGamesCheckbox = document.getElementById("hide-selected-games") as HTMLInputElement;
 const hideOwnedGamesCheckbox = document.getElementById("hide-owned-games") as HTMLInputElement;
 const displayedGamesCount = document.getElementById("displayed-games-count") as HTMLElement;
+const unfinishedGamesCount = document.getElementById("unfinished-games-count") as HTMLElement;
+const ownedGamesSummary = document.getElementById("owned-games-summary") as HTMLElement;
 const autoSelectSingleFileButton = document.getElementById("auto-select-single-file-btn") as HTMLButtonElement;
 const autoSelectRegionPreferencesButton = document.getElementById("auto-select-region-preferences-btn") as HTMLButtonElement;
 const statusText = document.getElementById("status") as HTMLElement;
@@ -29,6 +32,19 @@ function formatOwnedPercentage(ownedGameCount: number, totalGameCount: number): 
   return String(Math.round((ownedGameCount / totalGameCount) * 100));
 }
 
+async function refreshGlobalSummary(): Promise<void> {
+  try {
+    const summary = await fetchGlobalGameSummary();
+    const ownedPercentage = formatOwnedPercentage(summary.owned_game_count, summary.all_game_count);
+
+    unfinishedGamesCount.textContent = `Unselected: ${summary.unfinished_game_count}`;
+    ownedGamesSummary.textContent = `Owned: ${ownedPercentage}%`;
+  } catch {
+    unfinishedGamesCount.textContent = "Unselected: -";
+    ownedGamesSummary.textContent = "Owned: -";
+  }
+}
+
 async function persistCheckboxChange(checkbox: HTMLInputElement, nextValue: boolean): Promise<void> {
   const previousChecked = checkbox.checked;
   const previousState = checkbox.dataset.requiredState || "null";
@@ -42,6 +58,7 @@ async function persistCheckboxChange(checkbox: HTMLInputElement, nextValue: bool
     nextValue,
   ).then(() => {
     checkbox.dataset.requiredState = nextValue ? "true" : "false";
+    void refreshGlobalSummary();
   }).catch((error) => {
     checkbox.checked = previousChecked;
     checkbox.dataset.requiredState = previousState;
@@ -82,6 +99,7 @@ async function selectPlatformAndLoad(platformId: string): Promise<void> {
 async function loadPlatforms(): Promise<void> {
   try {
     const platforms = await fetchPlatforms();
+    void refreshGlobalSummary();
     const pageState = getPageStateFromUrl();
 
     hideSelectedGamesCheckbox.checked = pageState.hideSelectedGames;
@@ -113,9 +131,11 @@ async function loadPlatforms(): Promise<void> {
     statusText.textContent = "";
     clearGames(gamesContainer);
     setDisplayedGamesCount(displayedGamesCount, 0);
+    void refreshGlobalSummary();
   } catch (error) {
     platformSelect.innerHTML = "<option value=''>Unable to load platforms</option>";
     statusText.textContent = error instanceof Error ? error.message : String(error);
+    void refreshGlobalSummary();
   }
 }
 
@@ -177,7 +197,10 @@ autoSelectSingleFileButton.addEventListener("click", () => {
   autoSelectSingleFileButton.disabled = true;
 
   void autoSelectSingleFileGames(Number.parseInt(selectedOption.value, 10)).then((payload) => {
-    return selectPlatformAndLoad(selectedOption.value);
+    return Promise.all([
+      selectPlatformAndLoad(selectedOption.value),
+      refreshGlobalSummary(),
+    ]).then(() => undefined);
   }).catch((error) => {
     statusText.textContent = error instanceof Error ? error.message : String(error);
   }).finally(() => {
@@ -196,7 +219,10 @@ autoSelectRegionPreferencesButton.addEventListener("click", () => {
   autoSelectRegionPreferencesButton.disabled = true;
 
   void autoSelectRegionPreferences(Number.parseInt(selectedOption.value, 10)).then((payload) => {
-    return selectPlatformAndLoad(selectedOption.value);
+    return Promise.all([
+      selectPlatformAndLoad(selectedOption.value),
+      refreshGlobalSummary(),
+    ]).then(() => undefined);
   }).catch((error) => {
     statusText.textContent = error instanceof Error ? error.message : String(error);
   }).finally(() => {

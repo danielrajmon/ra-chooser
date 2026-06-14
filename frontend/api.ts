@@ -5,6 +5,12 @@ const API_BASE = isFrontendDevPort
 
 type PlatformsResponse = Array<{ id: number; name: string; game_count: number; owned_game_count: number }>;
 
+type GlobalGameSummaryResponse = {
+  all_game_count: number;
+  owned_game_count: number;
+  unfinished_game_count: number;
+};
+
 type GamesResponse = {
   games: Array<{
     id: number;
@@ -66,6 +72,10 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
 
 export function fetchPlatforms(): Promise<PlatformsResponse> {
   return fetchJson<PlatformsResponse>(`${API_BASE}/platforms`);
+}
+
+export function fetchGlobalGameSummary(): Promise<GlobalGameSummaryResponse> {
+  return fetchJson<GlobalGameSummaryResponse>(`${API_BASE}/games/summary`);
 }
 
 export function fetchGamesForPlatform(
